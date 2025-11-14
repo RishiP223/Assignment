@@ -353,48 +353,31 @@ export default function NotesApp() {
   };
 
   // Generic helper to call Groq Chat Completions
-  const callGroq = async (prompt, maxTokens = 512, model = 'llama-3.3-70b-versatile') => {
-    const key = getGroqKey();
-    if (!key) {
-      alert('Groq API key not configured. Please contact the administrator.');
-      return null;
-    }
-
+  
+const callGroq = async (prompt, maxTokens = 512, model = 'llama-3.3-70b-versatile') => {
+    // Proxy through your serverless endpoint on Vercel
     try {
-      const body = {
-        model,
-        messages: [
-          { role: 'user', content: prompt }
-        ],
-        max_completion_tokens: maxTokens
-      };
-
-      const res = await fetch(GROQ_ENDPOINT, {
+      const res = await fetch('/api/groq', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`,
-        },
-        body: JSON.stringify(body)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, maxTokens, model })
       });
 
       if (!res.ok) {
         const errText = await res.text();
-        console.error('Groq error:', res.status, errText);
-        throw new Error(`Groq API error (${res.status}): ${errText}`);
+        console.error('Proxy error', res.status, errText);
+        return null;
       }
 
       const data = await res.json();
-      const content =
-        data?.choices?.[0]?.message?.content ??
-        data?.choices?.[0]?.text ??
-        (typeof data === 'string' ? data : '');
-      return content;
+      // Keep compatibility with previous return shapes
+      return data?.choices?.[0]?.message?.content ?? data?.choices?.[0]?.text ?? (typeof data === 'string' ? data : data);
     } catch (e) {
-      console.error('callGroq error', e);
+      console.error('callGroq (client) error', e);
       return null;
     }
   };
+;
 
   const performGrammarCheck = async () => {
     if (!currentNote?.content) return;
